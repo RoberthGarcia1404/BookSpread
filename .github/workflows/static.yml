@@ -29,10 +29,11 @@ jobs:
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Subir archivos de la carpeta ruleta
+      - name: Subir archivo a GitHub Pages
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'book-pdf-creator.html'  # ¡Aquí cambiamos
+          path: 'index.html'  # Sube toda la raíz del repositorio
+
       - name: Desplegar en GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

@@ -32,7 +32,7 @@ jobs:
       - name: Subir archivos de la carpeta ruleta
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'book-pdf-creator'  # ¡Aquí cambiamos
+          path: 'book-pdf-creator.html'  # ¡Aquí cambiamos
       - name: Desplegar en GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

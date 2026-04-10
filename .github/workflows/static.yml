@@ -1,3 +1,4 @@
+puedes modificarme este static.yml para que me lea el archivo que tengo que se llama book-pdf-creator.html y el cual no esta en una carpeta ni nada
 # Workflow para desplegar contenido estático en GitHub Pages
 name: Deploy BookSpread
 
@@ -29,11 +30,10 @@ jobs:
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Subir archivo a GitHub Pages
+      - name: Subir archivos de la carpeta ruleta
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'index.html'  # Sube toda la raíz del repositorio
-
+          path: 'book-pdf-creator'  # ¡Aquí cambiamos
       - name: Desplegar en GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

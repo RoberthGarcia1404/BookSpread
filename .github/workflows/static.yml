@@ -1,5 +1,4 @@
-puedes modificarme este static.yml para que me lea el archivo que tengo que se llama book-pdf-creator.html y el cual no esta en una carpeta ni nada
-# Workflow para desplegar contenido estático en GitHub Pages
+
 name: Deploy BookSpread
 
 on:

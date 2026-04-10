@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BookSpread — Creador de PDF Libro (Línea de doblez incluida)</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap');
+
+  :root {
+    --bg: #0f0e0c;
+    --surface: #1a1915;
+    --surface2: #242320;
+    --surface3: #2e2d29;
+    --border: #3a3830;
+    --accent: #c9a96e;
+    --accent2: #8b6c3e;
+    --text: #e8e4dc;
+    --text2: #a09880;
+    --text3: #6b6456;
+    --drop-active: rgba(201,169,110,0.18);
+    --danger: #c96e6e;
+    --r: 10px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 28px; border-bottom: 1px solid var(--border);
+    background: var(--surface); flex-shrink: 0; z-index: 100;
+  }
+  .logo { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--accent); }
+  .logo span { color: var(--text3); font-size: 12px; margin-left: 8px; font-style: italic; }
+
+  .app {
+    display: grid; grid-template-columns: 300px 1fr;
+    flex: 1; min-height: 0; overflow: hidden;
+  }
+
+  .sidebar {
+    background: var(--surface); border-right: 1px solid var(--border);
+    overflow-y: auto; padding: 20px 16px;
+    display: flex; flex-direction: column; gap: 18px;
+  }
+
+  .sec-title {
+    font-size: 10px; font-weight: 600; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--text3); margin-bottom: 8px;
+  }
+
+  .pages-list { display: flex; flex-direction: column; gap: 6px; }
+
+  .page-item {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 10px; cursor: pointer;
+    display: flex; align-items: center; gap: 8px;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .page-item:hover { border-color: var(--accent2); }
+  .page-item.active { border-color: var(--accent); background: var(--surface3); }
+
+  .page-thumbs { display: flex; gap: 2px; }
+  .page-thumb {
+    width: 26px; height: 18px; border-radius: 2px;
+    background: var(--surface3); border: 1px solid var(--border);
+    overflow: hidden; display: flex; align-items: center;
+    justify-content: center; font-size: 7px; color: var(--text3);
+  }
+  .page-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .page-label { font-size: 12px; color: var(--text2); flex: 1; }
+  .page-num { font-size: 10px; color: var(--text3); font-weight: 600; }
+
+  .btn-del {
+    background: none; border: none; cursor: pointer;
+    color: var(--text3); font-size: 13px; padding: 2px 5px;
+    border-radius: 4px; opacity: 0; transition: opacity 0.2s, color 0.2s, background 0.2s;
+  }
+  .page-item:hover .btn-del { opacity: 1; }
+  .btn-del:hover { color: var(--danger); background: rgba(201,110,110,0.1); }
+
+  .btn-add {
+    width: 100%; padding: 9px; background: none;
+    border: 1px dashed var(--border); border-radius: 8px;
+    color: var(--text3); font-family: 'DM Sans', sans-serif; font-size: 13px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .btn-add:hover { border-color: var(--accent2); color: var(--accent); }
+
+  .margin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .mfield label { display: block; font-size: 11px; color: var(--text3); margin-bottom: 4px; font-weight: 500; }
+  .mfield input {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text); font-family: 'DM Sans', sans-serif;
+    font-size: 13px; padding: 6px 9px; transition: border-color 0.2s;
+    -moz-appearance: textfield;
+  }
+  .mfield input::-webkit-inner-spin-button { display: none; }
+  .mfield input:focus { outline: none; border-color: var(--accent); }
+
+  .fit-opts { display: flex; flex-direction: column; gap: 5px; }
+  .fit-opt {
+    display: flex; align-items: center; gap: 9px;
+    padding: 8px 10px; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 7px;
+    cursor: pointer; transition: border-color 0.2s, background 0.2s;
+  }
+  .fit-opt:hover { border-color: var(--accent2); }
+  .fit-opt.sel { border-color: var(--accent); background: var(--surface3); }
+  .fit-opt input { display: none; }
+  .rdot {
+    width: 13px; height: 13px; border-radius: 50%;
+    border: 2px solid var(--border); flex-shrink: 0;
+    transition: border-color 0.2s, background 0.2s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .fit-opt.sel .rdot { border-color: var(--accent); background: var(--accent); }
+  .fit-opt.sel .rdot::after { content:''; width:4px; height:4px; border-radius:50%; background:var(--bg); }
+  .fit-lbl { font-size: 12px; line-height: 1.35; }
+  .fit-lbl strong { display: block; color: var(--text); font-size: 12px; }
+  .fit-lbl span { color: var(--text3); font-size: 11px; }
+
+  /* TOGGLE */
+  .toggle-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 12px; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 8px;
+    cursor: pointer; transition: border-color 0.2s;
+    user-select: none;
+  }
+  .toggle-row:hover { border-color: var(--accent2); }
+  .toggle-row.on { border-color: var(--accent); }
+  .tgl-left { display: flex; align-items: center; gap: 9px; }
+  .tgl-texts strong { display: block; color: var(--text); font-size: 13px; }
+  .tgl-texts span { font-size: 11px; color: var(--text3); }
+  .switch {
+    width: 36px; height: 20px; background: var(--surface3);
+    border-radius: 10px; position: relative;
+    transition: background 0.25s; flex-shrink: 0;
+    border: 1px solid var(--border);
+  }
+  .switch::after {
+    content: ''; position: absolute; width: 14px; height: 14px;
+    border-radius: 50%; background: var(--text3);
+    top: 2px; left: 2px; transition: transform 0.25s, background 0.25s;
+  }
+  .toggle-row.on .switch { background: rgba(201,169,110,0.2); border-color: var(--accent2); }
+  .toggle-row.on .switch::after { transform: translateX(16px); background: var(--accent); }
+
+  .size-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+  .sz-btn {
+    padding: 5px 12px; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 5px;
+    color: var(--text2); font-family: 'DM Sans', sans-serif;
+    font-size: 12px; cursor: pointer; transition: all 0.2s;
+  }
+  .sz-btn:hover { border-color: var(--accent2); color: var(--text); }
+  .sz-btn.act { border-color: var(--accent); color: var(--accent); background: var(--surface3); }
+
+  .btn-export {
+    width: 100%; padding: 12px; background: var(--accent); border: none;
+    border-radius: var(--r); color: #1a1210; font-family: 'DM Sans', sans-serif;
+    font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+  }
+  .btn-export:hover { background: #d9bc85; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(201,169,110,0.25); }
+  .btn-export:active { transform: none; }
+  .btn-export:disabled { opacity: 0.35; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  hr.div { border: none; border-top: 1px solid var(--border); }
+  .info { font-size: 11px; color: var(--text3); line-height: 1.6; }
+
+  /* MAIN */
+  .main { display: flex; flex-direction: column; overflow: hidden; }
+
+  .toolbar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 20px; border-bottom: 1px solid var(--border);
+    background: var(--surface); flex-shrink: 0;
+  }
+  .tbar-lbl { font-size: 13px; color: var(--text2); flex: 1; }
+  .tbar-lbl strong { color: var(--accent); }
+  .tbar-info { font-size: 11px; color: var(--text3); }
+
+  .canvas-area {
+    flex: 1; overflow: auto;
+    display: flex; align-items: center; justify-content: center;
+    padding: 40px;
+    background: #141310;
+    background-image: radial-gradient(ellipse at center, #1e1c17 0%, #0c0b09 100%);
+  }
+
+  /* THE DOCUMENT */
+  .doc {
+    position: relative;
+    background: #ffffff;
+    box-shadow: 0 20px 70px rgba(0,0,0,0.75), 0 2px 10px rgba(0,0,0,0.5);
+    border-radius: 1px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  /* FOLD LINE — dashed vertical line at exact center */
+  .fold-line {
+    position: absolute;
+    top: 0; bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    border-left: 1.5px dashed rgba(150,140,120,0.5);
+    z-index: 30;
+    pointer-events: none;
+    transition: opacity 0.25s;
+  }
+  .fold-line.hidden { opacity: 0; }
+
+  /* HALF containers — left and right of center */
+  .half {
+    position: absolute;
+    top: 0; bottom: 0;
+    overflow: hidden;
+  }
+  .half.left  { left: 0; }
+  .half.right { right: 0; }
+
+  /* MARGIN GUIDE */
+  .margin-guide {
+    position: absolute;
+    border: 1px dashed rgba(201,169,110,0.3);
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  /* DROP ZONE */
+  .drop-zone {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 8px;
+    cursor: pointer;
+    border: 2px dashed rgba(120,110,90,0.2);
+    transition: background 0.2s, border-color 0.2s;
+  }
+  .drop-zone:hover, .drop-zone.over {
+    background: var(--drop-active);
+    border-color: rgba(201,169,110,0.45);
+  }
+  .drop-zone input { display: none; }
+  .dz-side { font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: rgba(100,90,70,0.5); }
+  .dz-icon { font-size: 28px; opacity: 0.4; }
+  .dz-txt  { font-size: 11px; color: rgba(120,110,90,0.6); text-align: center; line-height: 1.6; }
+
+  /* IMAGE WRAPPER */
+  .img-wrap { position: absolute; cursor: pointer; }
+  .img-wrap img { display: block; position: absolute; }
+
+  .img-overlay {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    opacity: 0; transition: opacity 0.2s; z-index: 5;
+  }
+  .img-wrap:hover .img-overlay { opacity: 1; }
+
+  .ov-btn {
+    background: rgba(255,255,255,0.92); border: none; border-radius: 5px;
+    padding: 6px 13px; font-size: 11px; font-weight: 600; cursor: pointer; color: #222;
+    transition: background 0.15s, transform 0.15s;
+  }
+  .ov-btn:hover { background: #fff; transform: scale(1.04); }
+  .ov-btn.del { background: rgba(201,110,110,0.9); color: #fff; }
+  .ov-btn.del:hover { background: var(--danger); }
+
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .toast {
+    position: fixed; bottom: 20px; right: 20px;
+    background: var(--surface3); border: 1px solid var(--border); color: var(--text);
+    padding: 11px 18px; border-radius: 8px; font-size: 13px; z-index: 9999;
+    transform: translateY(60px); opacity: 0;
+    transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    box-shadow: 0 6px 24px rgba(0,0,0,0.4);
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.ok  { border-color: var(--accent); }
+  .toast.err { border-color: var(--danger); }
+
+  /* FOOTER */
+  .app-footer {
+    flex-shrink: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 10px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--text3);
+    z-index: 100;
+  }
+  .footer-logo {
+    font-family: 'DM Serif Display', serif;
+    font-size: 14px;
+    color: var(--accent2);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .footer-logo span { font-family: 'DM Sans', sans-serif; font-size: 12px; color: var(--text3); }
+  .footer-git a {
+    color: var(--text2);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: color 0.2s;
+    font-size: 12px;
+  }
+  .footer-git a:hover {
+    color: var(--accent);
+    text-decoration: underline;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">BookSpread <span>— PDF formato libro (línea de doblez)</span></div>
+  <div style="font-size:11px;color:var(--text3)">Hoja horizontal partida al centro | La línea punteada SÍ aparece en el PDF</div>
+</header>
+
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+
+    <div>
+      <div class="sec-title">📄 Páginas</div>
+      <div class="pages-list" id="pagesList"></div>
+      <br>
+      <button class="btn-add" onclick="addPage()">
+        <span style="font-size:16px">+</span> Agregar hoja
+      </button>
+    </div>
+
+    <hr class="div">
+
+    <div>
+      <div class="sec-title">📐 Tamaño de hoja</div>
+      <div class="size-btns">
+        <button class="sz-btn act" onclick="setSize('Letter',this)">Carta</button>
+        <button class="sz-btn" onclick="setSize('A4',this)">A4</button>
+        <button class="sz-btn" onclick="setSize('A3',this)">A3</button>
+        <button class="sz-btn" onclick="setSize('Square',this)">Cuadrado</button>
+      </div>
+    </div>
+
+    <hr class="div">
+
+    <div>
+      <div class="sec-title">📍 Línea de doblez (exporta a PDF)</div>
+      <div class="toggle-row on" id="foldToggle" onclick="toggleFold()">
+        <div class="tgl-left">
+          <span style="font-size:18px">📏</span>
+          <div class="tgl-texts">
+            <strong>Incluir línea punteada en PDF</strong>
+            <span>Se exporta una línea vertical delgada en el centro</span>
+          </div>
+        </div>
+        <div class="switch"></div>
+      </div>
+      <br>
+      <div class="info">✅ <strong>Ahora la línea SÍ aparece en el PDF final</strong> (color gris suave, estilo punteado, justo en la mitad de la hoja). Ideal para marcar el doblez en impresión.</div>
+    </div>
+
+    <hr class="div">
+
+    <div>
+      <div class="sec-title">📏 Márgenes (cm)</div>
+      <div class="margin-grid">
+        <div class="mfield">
+          <label>Superior</label>
+          <input type="number" id="mTop" value="1" min="0" max="10" step="0.1" oninput="updatePreview()">
+        </div>
+        <div class="mfield">
+          <label>Inferior</label>
+          <input type="number" id="mBottom" value="1" min="0" max="10" step="0.1" oninput="updatePreview()">
+        </div>
+        <div class="mfield">
+          <label>Interior (lomo)</label>
+          <input type="number" id="mInner" value="1.2" min="0" max="10" step="0.1" oninput="updatePreview()">
+        </div>
+        <div class="mfield">
+          <label>Exterior (corte)</label>
+          <input type="number" id="mOuter" value="0.8" min="0" max="10" step="0.1" oninput="updatePreview()">
+        </div>
+      </div>
+    </div>
+
+    <hr class="div">
+
+    <div>
+      <div class="sec-title">🖼 Ajuste de imagen</div>
+      <div class="fit-opts">
+        <label class="fit-opt sel" onclick="setFit('contain',this)">
+          <input type="radio" name="fit" value="contain" checked>
+          <div class="rdot"></div>
+          <div class="fit-lbl"><strong>Contener</strong><span>Respeta proporción, sin recorte</span></div>
+        </label>
+        <label class="fit-opt" onclick="setFit('cover',this)">
+          <input type="radio" name="fit" value="cover">
+          <div class="rdot"></div>
+          <div class="fit-lbl"><strong>Cubrir</strong><span>Llena el área, puede recortar</span></div>
+        </label>
+        <label class="fit-opt" onclick="setFit('fill',this)">
+          <input type="radio" name="fit" value="fill">
+          <div class="rdot"></div>
+          <div class="fit-lbl"><strong>Deformar (100%)</strong><span>Estira para ocupar todo</span></div>
+        </label>
+        <label class="fit-opt" onclick="setFit('fit-width',this)">
+          <input type="radio" name="fit" value="fit-width">
+          <div class="rdot"></div>
+          <div class="fit-lbl"><strong>100% ancho</strong><span>Llena horizontal, centra vertical</span></div>
+        </label>
+        <label class="fit-opt" onclick="setFit('fit-height',this)">
+          <input type="radio" name="fit" value="fit-height">
+          <div class="rdot"></div>
+          <div class="fit-lbl"><strong>100% alto</strong><span>Llena vertical, centra horizontal</span></div>
+        </label>
+      </div>
+    </div>
+
+    <hr class="div">
+
+    <div>
+      <div class="sec-title">💾 Exportar</div>
+      <button class="btn-export" id="btnExport" onclick="exportPDF()">Exportar PDF (con línea de doblez)</button>
+      <br><br>
+      <div class="info" id="exportInfo">Agrega imágenes para exportar.</div>
+    </div>
+
+  </div><!-- /sidebar -->
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="toolbar">
+      <div class="tbar-lbl">Editando: <strong id="tbarTitle">Hoja 1</strong></div>
+      <div class="tbar-info" id="tbarInfo"></div>
+    </div>
+    <div class="canvas-area" id="canvasArea"></div>
+  </div>
+
+</div>
+
+<!-- FOOTER con créditos y enlace a GitHub -->
+<div class="app-footer">
+  <div class="footer-logo">
+    <span>©</span> Roberth Garcia <span>ʕ •ᴥ•ʔ</span>
+  </div>
+  <div class="footer-git">
+    <a href="https://github.com/RoberthGarcia1404" target="_blank" rel="noopener noreferrer">
+      <span>🐙</span> github.com/RoberthGarcia1404
+    </a>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+// ── SIZES in cm (landscape orientation: w=long, h=short) ─────────────────────
+const SIZES = {
+  Letter: { w: 27.94, h: 21.59 },
+  A4:     { w: 29.70, h: 21.00 },
+  A3:     { w: 42.00, h: 29.70 },
+  Square: { w: 28.00, h: 28.00 },
+};
+
+// Preview scale: px per cm
+const PPcm = 34;
+
+let state = {
+  pages:     [{ id: uid(), left: null, right: null }],
+  activeIdx: 0,
+  size:      'Letter',
+  margins:   { top:1, bottom:1, inner:1.2, outer:0.8 },
+  fit:       'contain',
+  showFold:  true,
+};
+
+function uid() { return Math.random().toString(36).slice(2,9); }
+
+window.onload = () => renderAll();
+
+function renderAll() {
+  readMargins();
+  renderSidebar();
+  renderDoc();
+}
+
+function readMargins() {
+  state.margins = {
+    top:    +document.getElementById('mTop').value    || 0,
+    bottom: +document.getElementById('mBottom').value || 0,
+    inner:  +document.getElementById('mInner').value  || 0,
+    outer:  +document.getElementById('mOuter').value  || 0,
+  };
+}
+
+function updatePreview() { readMargins(); renderDoc(); }
+
+// ── PAGE MANAGEMENT ───────────────────────────────────────────────────────────
+function addPage() {
+  state.pages.push({ id: uid(), left: null, right: null });
+  state.activeIdx = state.pages.length - 1;
+  renderAll();
+}
+
+function deletePage(i) {
+  if (state.pages.length === 1) { showToast('Debe quedar al menos 1 hoja.','err'); return; }
+  state.pages.splice(i, 1);
+  if (state.activeIdx >= state.pages.length) state.activeIdx = state.pages.length - 1;
+  renderAll();
+}
+
+function selectPage(i) { state.activeIdx = i; renderSidebar(); renderDoc(); }
+
+// ── SETTINGS ──────────────────────────────────────────────────────────────────
+function setFit(val, el) {
+  state.fit = val;
+  document.querySelectorAll('.fit-opt').forEach(o => o.classList.remove('sel'));
+  el.classList.add('sel');
+  renderDoc();
+}
+
+function setSize(s, el) {
+  state.size = s;
+  document.querySelectorAll('.sz-btn').forEach(b => b.classList.remove('act'));
+  el.classList.add('act');
+  renderDoc();
+}
+
+function toggleFold() {
+  state.showFold = !state.showFold;
+  const row = document.getElementById('foldToggle');
+  state.showFold ? row.classList.add('on') : row.classList.remove('on');
+  const fl = document.querySelector('.fold-line');
+  if (fl) fl.classList.toggle('hidden', !state.showFold);
+}
+
+// ── SIDEBAR ───────────────────────────────────────────────────────────────────
+function renderSidebar() {
+  const list = document.getElementById('pagesList');
+  list.innerHTML = '';
+  state.pages.forEach((pg, i) => {
+    const el = document.createElement('div');
+    el.className = 'page-item' + (i === state.activeIdx ? ' active' : '');
+    el.onclick = e => { if (!e.target.closest('.btn-del')) selectPage(i); };
+    el.innerHTML = `
+      <div class="page-thumbs">
+        <div class="page-thumb">${pg.left  ? `<img src="${pg.left.src}">` : '<span>—</span>'}</div>
+        <div class="page-thumb">${pg.right ? `<img src="${pg.right.src}">` : '<span>—</span>'}</div>
+      </div>
+      <div class="page-label">Hoja ${i+1}</div>
+      <div class="page-num">${i+1}</div>
+      <button class="btn-del" onclick="deletePage(${i})" title="Eliminar">✕</button>
+    `;
+    list.appendChild(el);
+  });
+  const withImg = state.pages.filter(p => p.left || p.right).length;
+  document.getElementById('exportInfo').textContent = `${withImg} de ${state.pages.length} hojas con imagen.`;
+  document.getElementById('btnExport').disabled = withImg === 0;
+}
+
+// ── DOCUMENT PREVIEW ──────────────────────────────────────────────────────────
+function renderDoc() {
+  const pg = state.pages[state.activeIdx];
+  const sz = SIZES[state.size];
+  const m  = state.margins;
+
+  const docW = Math.round(sz.w * PPcm);
+  const docH = Math.round(sz.h * PPcm);
+  const halfW = Math.round(docW / 2);
+
+  document.getElementById('tbarTitle').textContent = `Hoja ${state.activeIdx+1}`;
+  document.getElementById('tbarInfo').textContent  = `${sz.w} × ${sz.h} cm · ${state.size} horizontal`;
+
+  const area = document.getElementById('canvasArea');
+  area.innerHTML = '';
+
+  const doc = document.createElement('div');
+  doc.className = 'doc';
+  doc.style.width  = docW + 'px';
+  doc.style.height = docH + 'px';
+
+  const leftEl = buildHalf('left', pg.left, halfW, docH, {
+    top:    m.top    * PPcm,
+    bottom: m.bottom * PPcm,
+    left:   m.outer  * PPcm,
+    right:  m.inner  * PPcm,
+  });
+  leftEl.style.left  = '0';
+  leftEl.style.width = halfW + 'px';
+
+  const rightEl = buildHalf('right', pg.right, halfW, docH, {
+    top:    m.top    * PPcm,
+    bottom: m.bottom * PPcm,
+    left:   m.inner  * PPcm,
+    right:  m.outer  * PPcm,
+  });
+  rightEl.style.left  = halfW + 'px';
+  rightEl.style.width = halfW + 'px';
+
+  const fold = document.createElement('div');
+  fold.className = 'fold-line' + (state.showFold ? '' : ' hidden');
+  doc.appendChild(leftEl);
+  doc.appendChild(rightEl);
+  doc.appendChild(fold);
+  area.appendChild(doc);
+}
+
+function buildHalf(side, imgData, halfW, docH, mg) {
+  const el = document.createElement('div');
+  el.className = `half ${side}`;
+  el.style.height = docH + 'px';
+
+  const guide = document.createElement('div');
+  guide.className = 'margin-guide';
+  guide.style.top    = mg.top    + 'px';
+  guide.style.bottom = mg.bottom + 'px';
+  guide.style.left   = mg.left   + 'px';
+  guide.style.right  = mg.right  + 'px';
+  el.appendChild(guide);
+
+  const areaW = halfW  - mg.left - mg.right;
+  const areaH = docH   - mg.top  - mg.bottom;
+
+  if (!imgData) {
+    const dz = document.createElement('div');
+    dz.className = 'drop-zone';
+    dz.innerHTML = `
+      <div class="dz-side">${side === 'left' ? '← Izquierda' : 'Derecha →'}</div>
+      <div class="dz-icon">${side === 'left' ? '📖' : '📗'}</div>
+      <div class="dz-txt">Clic o arrastra<br>imagen aquí</div>
+      <input type="file" accept="image/*" id="fi_${side}">
+    `;
+    dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('over'); });
+    dz.addEventListener('dragleave', ()  => dz.classList.remove('over'));
+    dz.addEventListener('drop', e => {
+      e.preventDefault(); dz.classList.remove('over');
+      if (e.dataTransfer.files[0]) loadImg(e.dataTransfer.files[0], side);
+    });
+    dz.addEventListener('click', () => document.getElementById(`fi_${side}`).click());
+    dz.querySelector(`#fi_${side}`).addEventListener('change', e => {
+      if (e.target.files[0]) loadImg(e.target.files[0], side);
+    });
+    el.appendChild(dz);
+  } else {
+    const wrap = document.createElement('div');
+    wrap.className = 'img-wrap';
+    wrap.style.inset = '0';
+    wrap.style.position = 'absolute';
+
+    const img = document.createElement('img');
+    img.src = imgData.src;
+    applyFit(img, state.fit, mg.left, mg.top, areaW, areaH, imgData.nw, imgData.nh);
+
+    const ov = document.createElement('div');
+    ov.className = 'img-overlay';
+    ov.innerHTML = `
+      <button class="ov-btn" onclick="changeImg('${side}')">Cambiar</button>
+      <button class="ov-btn del" onclick="removeImg('${side}')">Quitar</button>
+    `;
+    wrap.appendChild(img);
+    wrap.appendChild(ov);
+    el.appendChild(wrap);
+
+    const inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = 'image/*';
+    inp.id = `fi_${side}`; inp.style.display = 'none';
+    inp.addEventListener('change', e => {
+      if (e.target.files[0]) loadImg(e.target.files[0], side);
+    });
+    el.appendChild(inp);
+  }
+  return el;
+}
+
+function applyFit(img, fit, ml, mt, aW, aH, natW, natH) {
+  img.style.position = 'absolute';
+  if (fit === 'fill') {
+    img.style.left = ml+'px'; img.style.top = mt+'px';
+    img.style.width = aW+'px'; img.style.height = aH+'px';
+    img.style.objectFit = 'fill';
+  } else if (fit === 'contain') {
+    img.style.left = ml+'px'; img.style.top = mt+'px';
+    img.style.width = aW+'px'; img.style.height = aH+'px';
+    img.style.objectFit = 'contain';
+  } else if (fit === 'cover') {
+    img.style.left = ml+'px'; img.style.top = mt+'px';
+    img.style.width = aW+'px'; img.style.height = aH+'px';
+    img.style.objectFit = 'cover';
+  } else if (fit === 'fit-width') {
+    const scaledH = (natH / natW) * aW;
+    img.style.width  = aW + 'px';
+    img.style.height = scaledH + 'px';
+    img.style.left   = ml + 'px';
+    img.style.top    = (mt + (aH - scaledH) / 2) + 'px';
+    img.style.objectFit = 'fill';
+  } else if (fit === 'fit-height') {
+    const scaledW = (natW / natH) * aH;
+    img.style.height = aH + 'px';
+    img.style.width  = scaledW + 'px';
+    img.style.top    = mt + 'px';
+    img.style.left   = (ml + (aW - scaledW) / 2) + 'px';
+    img.style.objectFit = 'fill';
+  }
+}
+
+function loadImg(file, side) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const i = new Image();
+    i.onload = () => {
+      state.pages[state.activeIdx][side] = { src: e.target.result, nw: i.naturalWidth, nh: i.naturalHeight };
+      renderAll();
+      showToast(`Imagen cargada (${side === 'left' ? 'izquierda' : 'derecha'})`, 'ok');
+    };
+    i.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function changeImg(side) { document.getElementById(`fi_${side}`).click(); }
+function removeImg(side) { state.pages[state.activeIdx][side] = null; renderAll(); }
+
+// ── PDF EXPORT (con línea de doblez incluida) ────────────────────────────────
+async function exportPDF() {
+  const btn = document.getElementById('btnExport');
+  btn.disabled = true; btn.textContent = 'Generando PDF con línea...';
+  readMargins();
+
+  const { jsPDF } = window.jspdf;
+  const sz = SIZES[state.size];
+  const m  = state.margins;
+  const halfW = sz.w / 2;
+  const aH    = sz.h - m.top - m.bottom;
+
+  const pdf = new jsPDF({
+    orientation: 'landscape',
+    unit: 'cm',
+    format: [sz.w, sz.h],
+  });
+
+  let first = true;
+  for (const pg of state.pages) {
+    if (!first) pdf.addPage([sz.w, sz.h], 'landscape');
+    first = false;
+
+    if (pg.left) {
+      placeImage(pdf, pg.left,
+        m.outer,
+        m.top,
+        halfW - m.outer - m.inner,
+        aH,
+        state.fit);
+    }
+    if (pg.right) {
+      placeImage(pdf, pg.right,
+        halfW + m.inner,
+        m.top,
+        halfW - m.inner - m.outer,
+        aH,
+        state.fit);
+    }
+
+    if (state.showFold) {
+      pdf.setDrawColor(140, 130, 110);
+      pdf.setLineWidth(0.02);
+      pdf.setLineDash([0.1, 0.15], 0);
+      pdf.line(halfW, m.top, halfW, sz.h - m.bottom);
+      pdf.setLineDash([0, 0]);
+    }
+  }
+
+  pdf.save('bookspread_con_linea_doble.pdf');
+  btn.disabled = false; btn.textContent = 'Exportar PDF (con línea de doblez)';
+  showToast('✅ PDF exportado con línea punteada de doblez', 'ok');
+}
+
+function placeImage(pdf, imgData, x, y, w, h, fit) {
+  const nw = imgData.nw, nh = imgData.nh, ar = nw / nh;
+  let dx = x, dy = y, dw = w, dh = h;
+
+  if (fit === 'contain') {
+    const boxAR = w / h;
+    if (ar > boxAR) { dw=w; dh=w/ar; dy=y+(h-dh)/2; }
+    else            { dh=h; dw=h*ar; dx=x+(w-dw)/2; }
+  } else if (fit === 'fill' || fit === 'cover') {
+    dx=x; dy=y; dw=w; dh=h;
+  } else if (fit === 'fit-width') {
+    dw=w; dh=w/ar; dy=y+(h-dh)/2; dx=x;
+  } else if (fit === 'fit-height') {
+    dh=h; dw=h*ar; dx=x+(w-dw)/2; dy=y;
+  }
+
+  const fmt = imgData.src.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+  pdf.addImage(imgData.src, fmt, dx, dy, dw, dh);
+}
+
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `toast show ${type}`;
+  clearTimeout(window._tt);
+  window._tt = setTimeout(() => { t.className='toast'; }, 2800);
+}
+</script>
+</body>
+</html>
